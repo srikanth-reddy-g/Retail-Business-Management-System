@@ -1,0 +1,373 @@
+SQL> start query1
+SQL> SELECT pid, name
+  2  FROM products
+  3  WHERE discnt_category IN (
+  4  	 SELECT discnt_category
+  5  	 FROM prod_discnt
+  6  	 WHERE discnt_rate BETWEEN 0.1 AND 0.2
+  7  )
+  8  AND (qoh - 5) >= qoh_threshold
+  9  /
+
+PID  NAME                                                                       
+---- ---------------                                                            
+p001 stapler                                                                    
+p003 camera                                                                     
+p004 pencil                                                                     
+p007 tablet                                                                     
+p009 facemask                                                                   
+p010 powerbank                                                                  
+
+6 rows selected.
+
+SQL> start query2
+SQL> SELECT customers.first_name || ' ' || customers.last_name as name
+  2  FROM customers, purchases
+  3  WHERE customers.phone# LIKE '666%'
+  4    AND customers.cid = purchases.cid
+  5    AND TO_CHAR(purchases.pur_time, 'YYYY-MM') = '2022-10'
+  6  /
+
+no rows selected
+
+SQL> start query3
+SQL> SELECT customers.first_name, customers.phone#
+  2  FROM customers, purchases
+  3  WHERE purchases.payment >= 100
+  4    AND customers.cid = purchases.cid
+  5    AND TO_CHAR(purchases.pur_time, 'YYYY-MM') = '2022-10'
+  6  /
+
+FIRST_NAME PHONE#                                                               
+---------- ------------                                                         
+Connie     777-555-7654                                                         
+
+SQL> start query4
+SQL> SELECT pid, name
+  2  FROM products
+  3  WHERE pid IN (
+  4  	 SELECT pid
+  5  	 FROM purchases
+  6  	 WHERE purchases.unit_price < 10
+  7  	 AND (TO_CHAR(purchases.pur_time, 'YYYY-MM') = '2022-08' OR TO_CHAR(purchases.pur_time, 'YYYY-MM') = '2022-09')
+  8  )
+  9  /
+
+no rows selected
+
+SQL> start query5
+SQL> SELECT pur#
+  2  FROM purchases
+  3  WHERE cid IN (
+  4  	 SELECT cid
+  5  	 FROM customers
+  6  	 WHERE first_name LIKE 'K%'
+  7  )
+  8  AND pid IN (
+  9  	 SELECT pid
+ 10  	 FROM products
+ 11  	 WHERE orig_price < 15
+ 12  )
+ 13  AND eid IN (
+ 14  	 SELECT eid
+ 15  	 FROM employees
+ 16  	 WHERE telephone# LIKE '888%'
+ 17  )
+ 18  /
+
+      PUR#                                                                      
+----------                                                                      
+     10009                                                                      
+
+SQL> start query6
+SQL> COLUMN PUR_DATE FORMAT A30
+SQL> SELECT
+  2  	 pur#,
+  3  	 (
+  4  	     SELECT name
+  5  	     FROM products
+  6  	     WHERE pid = purchases.pid
+  7  	 ) AS "product name",
+  8  	 TO_CHAR(pur_time, 'Month DD, YYYY Day') AS pur_date,
+  9  	 payment,
+ 10  	 saving
+ 11  FROM
+ 12  	 purchases
+ 13  /
+
+      PUR# product name    PUR_DATE                          PAYMENT     SAVING 
+---------- --------------- ------------------------------ ---------- ---------- 
+     10001 TV              August    12, 2022 Friday          211.65      37.35 
+     10002 camera          December  20, 2022 Tuesday          118.4       29.6 
+     10003 pencil          October   08, 2022 Saturday          4.45         .5 
+     10004 chair           November  23, 2022 Wednesday        79.96         20 
+     10005 tablet          January   15, 2023 Sunday           179.1       19.9 
+     10006 facemask        February  20, 2023 Monday            33.3        3.7 
+     10007 facemask        January   10, 2023 Tuesday          49.95       5.55 
+     10008 lamp            August    16, 2022 Tuesday          17.96       1.99 
+     10009 stapler         December  12, 2022 Monday            8.99          1 
+     10010 TV              October   19, 2022 Wednesday       211.65      37.35 
+     10011 pencil          March     08, 2023 Wednesday          8.9          1 
+
+      PUR# product name    PUR_DATE                          PAYMENT     SAVING 
+---------- --------------- ------------------------------ ---------- ---------- 
+     10012 computer        February  18, 2023 Saturday         748.5      249.5 
+     10013 facemask        August    30, 2022 Tuesday           33.3        3.7 
+     10014 powerbank       November  14, 2022 Monday              81          9 
+
+14 rows selected.
+
+SQL> start query7-1
+SQL> SELECT eid, name
+  2  FROM employees
+  3  WHERE eid NOT IN (
+  4  	 SELECT eid
+  5  	 FROM purchases
+  6  )
+  7  /
+
+EID NAME                                                                        
+--- ---------------                                                             
+e05 Mike                                                                        
+
+SQL> start query7-2
+SQL> SELECT eid, name
+  2  FROM employees e
+  3  WHERE NOT EXISTS (
+  4  	 SELECT *
+  5  	 FROM purchases
+  6  	 WHERE eid = e.eid
+  7  )
+  8  /
+
+EID NAME                                                                        
+--- ---------------                                                             
+e05 Mike                                                                        
+
+SQL> start query8
+SQL> SELECT *
+  2  FROM prod_discnt pd
+  3  WHERE NOT EXISTS (
+  4  SELECT discnt_category
+  5  FROM products
+  6  WHERE discnt_category = pd.discnt_category
+  7  )
+  8  /
+
+DISCNT_CATEGORY DISCNT_RATE                                                     
+--------------- -----------                                                     
+              5          .3                                                     
+
+SQL> start query9
+SQL> SELECT first_name || ' ' || last_name AS name
+  2  FROM customers
+  3  WHERE visits_made > 1
+  4    AND cid NOT IN (
+  5  	 SELECT cid
+  6  	 FROM purchases
+  7  	 WHERE cid = customers.cid
+  8  	   AND pur_time > SYSDATE - 100
+  9    )
+ 10  /
+
+NAME                                                                            
+---------------------                                                           
+Kartik Puri                                                                     
+
+SQL> start query10
+SQL> SELECT eid, name
+  2  FROM employees e
+  3  WHERE NOT EXISTS (
+  4  	 SELECT *
+  5  	 FROM products p
+  6  	 WHERE discnt_category=3 AND NOT EXISTS (
+  7  	     SELECT *
+  8  	     FROM purchases pr
+  9  	     WHERE e.eid=pr.eid AND pr.pid = p.pid
+ 10  	 )
+ 11  )
+ 12  /
+
+EID NAME                                                                        
+--- ---------------                                                             
+e01 David                                                                       
+
+SQL> start query11
+SQL> SELECT pid, name
+  2  FROM products p
+  3  WHERE orig_price > 180
+  4  AND NOT EXISTS (
+  5    SELECT *
+  6    FROM employees e
+  7    WHERE (name LIKE 'A%' OR name LIKE 'D%')
+  8    AND NOT EXISTS (
+  9  	 SELECT *
+ 10  	 FROM purchases pr
+ 11  	 WHERE p.pid = pr.pid
+ 12  	 AND e.eid = pr.eid
+ 13    )
+ 14  )
+ 15  /
+
+PID  NAME                                                                       
+---- ---------------                                                            
+p002 TV                                                                         
+
+SQL> start query12
+SQL> SELECT c.cid
+  2  FROM customers c
+  3  WHERE to_char(c.last_visit_date, 'yyyy-mm') = '2022-08'
+  4  AND NOT EXISTS (
+  5    SELECT *
+  6    FROM products p
+  7    WHERE (orig_price BETWEEN 15 AND 20)
+  8    AND NOT EXISTS (
+  9  	 SELECT *
+ 10  	 FROM purchases pr
+ 11  	 WHERE c.cid = pr.cid
+ 12  	 AND p.pid = pr.pid
+ 13    )
+ 14  )
+ 15  /
+
+CID                                                                             
+----                                                                            
+c005                                                                            
+
+SQL> start query13
+SQL> SELECT c.cid, c.first_name || ' ' || c.last_name as name
+  2  FROM customers c
+  3  JOIN purchases p ON c.cid = p.cid
+  4  WHERE p.payment = (
+  5  	 SELECT MAX(payment)
+  6  	 FROM purchases
+  7  )
+  8  /
+
+CID  NAME                                                                       
+---- ---------------------                                                      
+c003 Chris Lewis                                                                
+
+SQL> start query14
+SQL> SELECT pr.pid, pr.name, MAX(pr.orig_price * pd.discnt_rate) AS "discount amount"
+  2  FROM products pr
+  3  JOIN prod_discnt pd ON pd.discnt_category = pr.discnt_category
+  4  GROUP BY pr.pid, pr.name
+  5  ORDER BY MAX(pr.orig_price * discnt_rate) DESC
+  6  FETCH FIRST 1 ROW ONLY
+  7  /
+
+PID  NAME            discount amount                                            
+---- --------------- ---------------                                            
+p008 computer                 124.75                                            
+
+SQL> start query15
+SQL> SELECT TO_CHAR(pur_time, 'YYYY/MM') AS Month,
+  2  	    SUM(payment) AS "Total Sale"
+  3  FROM purchases
+  4  GROUP BY TO_CHAR(pur_time, 'YYYY/MM')
+  5  ORDER BY TO_CHAR(pur_time, 'YYYY/MM') ASC
+  6  /
+
+MONTH   Total Sale                                                              
+------- ----------                                                              
+2022/08     262.91                                                              
+2022/10      216.1                                                              
+2022/11     160.96                                                              
+2022/12     127.39                                                              
+2023/01     229.05                                                              
+2023/02      781.8                                                              
+2023/03        8.9                                                              
+
+7 rows selected.
+
+SQL> start query16
+SQL> SELECT c.cid, c.first_name, COUNT(DISTINCT p.pid) AS num_products
+  2  FROM customers c
+  3  JOIN purchases p ON c.cid = p.cid
+  4  GROUP BY c.cid, c.first_name
+  5  ORDER BY c.cid
+  6  /
+
+CID  FIRST_NAME NUM_PRODUCTS                                                    
+---- ---------- ------------                                                    
+c001 Kathy                 3                                                    
+c002 John                  1                                                    
+c003 Chris                 3                                                    
+c004 Mike                  1                                                    
+c005 Kartik                2                                                    
+c006 Connie                2                                                    
+c007 Katie                 1                                                    
+c008 Joe                   1                                                    
+
+8 rows selected.
+
+SQL> start query17
+SQL> SELECT c.cid, c.first_name || ' ' || c.last_name AS name
+  2  	 FROM customers c
+  3  	 WHERE c.visits_made > ALL (
+  4  	      SELECT visits_made
+  5  	      FROM customers
+  6  	      WHERE phone# LIKE '777%'
+  7  	 )
+  8  	 order by c.cid
+  9  /
+
+CID  NAME                                                                       
+---- ---------------------                                                      
+c001 Kathy Cook                                                                 
+c003 Chris Lewis                                                                
+
+SQL> start query18
+SQL> SELECT p.pid, pr.name, SUM(p.quantity) AS "total quantity sold"
+  2  FROM purchases p
+  3  JOIN products pr ON p.pid = pr.pid
+  4  GROUP BY p.pid, pr.name
+  5  HAVING SUM(p.quantity) = (
+  6  	 SELECT MAX(SUM(quantity))
+  7  	 FROM purchases
+  8  	 GROUP BY pid
+  9  )
+ 10  ORDER BY p.pid
+ 11  /
+
+PID  NAME            total quantity sold                                        
+---- --------------- -------------------                                        
+p004 pencil                           15                                        
+
+SQL> start query19
+SQL> SELECT c.cid, c.first_name, SUM(p.payment) AS "total amount spent"
+  2  	 FROM customers c
+  3  	 JOIN purchases p ON c.cid = p.cid
+  4  	 GROUP BY c.cid, c.first_name
+  5  	 ORDER BY SUM(p.payment) DESC
+  6  	 FETCH FIRST 4 ROWS ONLY
+  7  /
+
+CID  FIRST_NAME total amount spent                                              
+---- ---------- ------------------                                              
+c003 Chris                  878.41                                              
+c001 Kathy                  363.35                                              
+c006 Connie                 220.55                                              
+c004 Mike                    179.1                                              
+
+SQL> start query20
+SQL> SELECT pd.pid, pd.name
+  2  FROM Products pd
+  3  WHERE pd.pid IN (
+  4  	 SELECT DISTINCT pr.pid
+  5  	 FROM purchases pr
+  6  )
+  7  ORDER BY (
+  8  	 SELECT MAX(pr.pur_time)
+  9  	 FROM purchases pr
+ 10  	 WHERE pr.pid = pd.pid
+ 11  )
+ 12  FETCH FIRST 1 ROW ONLY
+ 13  /
+
+PID  NAME                                                                       
+---- ---------------                                                            
+p006 lamp                                                                       
+
+SQL> spool off
